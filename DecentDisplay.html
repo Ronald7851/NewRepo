@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Token Addresses</title>
+  <style>
+    body {
+      background-color: white;
+    }
+    .button-container {
+      border: 1px solid black;
+      padding: 10px;
+      height: 60px;
+      line-height: 60px;
+    }
+    .token-row {
+      display: inline-flex;
+      align-items: center;
+    }
+    .token-row img {
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      margin-right: 20px;
+    }
+    .token-address {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="button-container" class="button-container">
+    <label for="button-container">Tokens in your Wallet</label>
+  </div>
+  <script>
+    const userWalletAddress = '0x29184B8B0E3fb3B4749Ae41867c147E97047Ee07';
+    const apiKey = 'DM7QQP89VWQQ2BSXNE948XMR6DAXNKNDE9';
+    const apiUrl = `https://api.etherscan.io/api?module=account&action=txlist&address=${userWalletAddress}&startblock=0&endblock=999999999&sort=asc&apikey=${apiKey}`;
+
+    async function fetchTokenData() {
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        const tokenAddresses = [];
+        data.result.forEach(tx => {
+          const tokenAddress = tx.to;
+          if (tokenAddress && !tokenAddresses.includes(tokenAddress)) {
+            tokenAddresses.push(tokenAddress);
+          }
+        });
+
+        const buttonContainer = document.getElementById("button-container");
+
+        for (const address of tokenAddresses) {
+          const balanceUrl = `https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=${address}&address=${userWalletAddress}&tag=latest&apikey=${apiKey}`;
+
+          try {
+            const balResponse = await fetch(balanceUrl);
+            const balData = await balResponse.json();
+
+            if (balData.status === '1') {
+              let balance = Number(balData.result) / 10 ** 18;
+              balance = balance.toFixed(4);
+
+              const tokenUrl = `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`;
+              const tokenResponse = await fetch(tokenUrl);
+              const tokenData = await tokenResponse.json();
+
+              if (tokenData) {
+                const name = tokenData.name;
+                const symbol = tokenData.symbol;
+                const logo = tokenData.image.small;
+                const currentPrice = tokenData.market_data.current_price.usd.toFixed(4);
+                const marketCap = tokenData.market_data.market_cap.usd.toFixed(2);
+                const priceChange = tokenData.market_data.price_change_percentage_24h.toFixed(2);
+                const usdBalance = (currentPrice * balance).toFixed(2);
+          
+                const logoElement = document.createElement("img");
+                logoElement.src = logo;
+
+                const button = document.createElement("button");
+                button.appendChild(logoElement);
+
+                button.addEventListener("click", function() {
+                  console.log("Selected Token:", name);
+                });
+
+                buttonContainer.appendChild(button);
+
+                const nameElement = document.getElementById('name' + name);
+                nameElement.value = name;
+
+                const symbolElement = document.getElementById('symbol' + name);
+                symbolElement.value = symbol;
+
+                const currentPriceElement = document.getElementById('currentPrice' + name);
+                currentPriceElement.value = currentPrice;
+
+                const balanceElement = document.getElementById('balance' + name);
+                balanceElement.value = balance;
+
+                const usdBalanceElement = document.getElementById('usdBalance' + name);
+                usdBalanceElement.value = usdBalance;
+
+                const priceChangeElement = document.getElementById('priceChange' + name);
+                priceChangeElement.value = priceChange;
+
+                const marketCapElement = document.getElementById('marketCap' + name);
+                marketCapElement.value = marketCap;
+              }
+            }
+          } catch (error) {
+            console.log(error);
+          }
+        }
+
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    fetchTokenData();
+  </script>
+</body>
+</html>
